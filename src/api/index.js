@@ -10,7 +10,8 @@ const baseUrl = "/api"
  * @returns {data:{metadataHash,modelData,params},error_info,message_code}
  */
 export const querymodel = (params) => {
-    return http.fetchPost(baseUrl + '/messages/querymodel', params)
+    console.log(params);
+    return http.fetchPost(baseUrl + '/messages/getmodel', params)
 }
 
 
@@ -38,6 +39,60 @@ export const mintnft = (params) => {
  * @param {accountAddr,begin,end} params  
  * @returns 
  */
+export const getnfts = (params) => {
+    return http.fetchPost(baseUrl + '/messages/getnfts', params)
+}
+
+/**
+ * savemetadata 参数示例:
+ * params: {
+ *  "nftId": "12",
+ *  "address": "0xowner",
+ *  "metadata" : {
+ *      "name": "test",
+ *      "desc": "desc",
+ *      "picUrl": "IPFS cid",
+ *      "property": ["property1"],
+ *      "key": "AES key",
+ *      "privUrl": "IPFS cid"
+ *  }
+ * }
+ */
+export const savemetadata = (params) => {
+    return http.fetchPost(baseUrl + '/messages/savemeta', params)
+}
+
+export const getMakeOffers = (params) => {
+    return http.fetchPost(baseUrl + '/messages/readoffer?nftId=' + params)
+}
+
+/**
+ * savemetadata 参数示例:
+ * params: "nftId"
+ */
 export const querymetadata = (params) => {
-    return http.fetchPost(baseUrl + '/messages/querymetadata', params)
+    return http.fetchPost(baseUrl + '/messages/getmeta?nftId=' + params)
+}
+
+
+/**
+ * saveoffer 参数示例:
+ * params: {
+ *  "nftId": "12",
+ *  "address": "0xowner",
+ *  "price": "100"
+ * }
+ */
+export const saveoffer = (params) => {
+    return http.fetchPost(baseUrl + '/messages/saveoffer', params);
+}
+
+/**
+ * readoffer 参数示例:
+ * params: {
+ *  "nftId": "12"
+ * }
+ */
+export const queryoffer = (params) => {
+    return http.fetchPost(baseUrl + '/messages/readoffer?nftId=' + params);
 }

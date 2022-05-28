@@ -8,20 +8,6 @@
       label-width="100px"
       class="demo-ruleForm"
     >
-      <!-- <el-form-item label="Model Image" prop="image">
-        <el-upload
-          action="https://jsonplaceholder.typicode.com/posts/"
-          list-type="picture-card"
-          :on-preview="handlePictureCardPreview"
-          :on-remove="handleRemove"
-        >
-          <i class="el-icon-plus"></i>
-        </el-upload>
-        <el-dialog :visible.sync="dialogVisible">
-          <img width="100%" :src="dialogImageUrl" alt="" />
-        </el-dialog>
-      </el-form-item> -->
-
       <el-form-item label="Model Image">
         <div class="com-upload-img">
           <div class="img_group">
@@ -58,6 +44,19 @@
 
       <el-form-item label="Description" prop="desc">
         <el-input v-model="ruleForm.desc"></el-input>
+      </el-form-item>
+
+      <el-form-item label="Properties" prop="properties">
+        <el-tooltip
+          class="item"
+          effect="light"
+          :content="item.content"
+          placement="bottom"
+          v-for="item in ruleLists"
+          :key="item.id"
+        >
+          <div class="property-item">{{ item.label }}</div>
+        </el-tooltip>
       </el-form-item>
 
       <!-- <el-form-item label="Report File" prop="reportFile">
@@ -97,10 +96,15 @@
 
 <script>
 import pdf from "vue-pdf";
-import { mintnft } from "../../api/index";
+import { savemetadata } from "../../api/index";
 import { createNFT } from "../../api/web3/contracts";
 import { mapState } from "vuex";
 import { getStore } from "../../utils/storage";
+import { randomString } from "../../utils/ranDom";
+
+import { uploadToIPFS } from "../../utils/ipfsUtil";
+import { encryptDataNormal, encryptDataEOA, getEOAPubkey, decryptDataEOA} from "../../utils/cryptoUtil";
+const crypto = require("crypto");
 export default {
   props: ["close"],
   data() {
@@ -118,6 +122,7 @@ export default {
       ruleForm: {
         name: "",
         desc: "",
+        properties: [],
         // include: false,
         // exlink: "",
       },
@@ -149,21 +154,12 @@ export default {
           },
         ],
 
-        exlink: [
-          {
-            required: true,
-            message: "Please Enter External Link",
-            trigger: "blur",
-          },
-          {
-            min: 10,
-            max: 200,
-            message: "10 to 200 characters long",
-            trigger: "blur",
-          },
-        ],
         // exlink: [
-        //   { required: true, message: "Please Enter External Link", trigger: "blur" },
+        //   {
+        //     required: true,
+        //     message: "Please Enter External Link",
+        //     trigger: "blur",
+        //   },
         //   {
         //     min: 10,
         //     max: 200,
@@ -179,7 +175,13 @@ export default {
     pdf,
   },
   computed: {
-    ...mapState(["user", "statusCode", "configData", "historySimulateData"]),
+    ...mapState([
+      "user",
+      "statusCode",
+      "configData",
+      "historySimulateData",
+      "ruleLists",
+    ]),
   },
   methods: {
     submitForm(formName) {
@@ -262,66 +264,83 @@ export default {
       return url;
     },
     //调用该函数创建nft
-    confirmMint(modelData, user, name, desc, displayUrl) {
-      // 参数: modelData, params, user, name, desc, displayUrl
-      // 获取画布上节点的参数包装
-      let paramsJSONString = this.getParamsOutsideGraph();
-      let resultJSONString = JSON.stringify(this.historySimulateData);
+    async confirmMint(modelData, user, name, desc, pic) {
+      // 随机生成长度为 32 的字符串，作为 NFT Key 的 AES 对称私钥
+      const key = randomString(32);
+      // 创建 AES 加密
+      // 参数 iv 不可以设置为 null
+      const cipher = crypto.createCipheriv("aes256", key, Buffer.alloc(16, 0));
 
-      const req = {
-        accountAddr: user,
-        metaData: {
-          name: this.ruleForm.name,
-          desc: this.ruleForm.desc,
-          displayUrl: displayUrl,
-          metadataHash: "",
-        },
-        secretData: {
-          modelData: modelData,
-          params: paramsJSONString,
-          results: resultJSONString,
-        },
-      };
-      console.log(req);
-      try {
-        mintnft(req).then((backRes) => {
-          if (backRes.message_code == this.statusCode.SUCCESSED) {
-            createNFT(
-              this.user,
-              name,
-              desc,
-              "",
-              backRes.data.metadata_hash
-            ).then((chainRes) => {
-              if (chainRes.status == "successed") {
-                this.$notify.success({
-                  title: "Success",
-                  message: "Mint NFT successful !",
-                  position: "bottom-right",
-                });
-              } else {
-                this.$notify.error({
-                  title: "Error",
-                  message: "Mint NFT error !",
-                  position: "bottom-right",
-                });
-              }
-            });
-          } else {
-            this.$notify.error({
-              title: "Error",
-              message: "Mint NFT error !",
-              position: "bottom-right",
-            });
-          }
-        });
-      } catch (e) {
-        this.$notify.error({
-          title: "Error",
-          message: "Mint NFT error !",
-          position: "bottom-right",
-        });
-      }
+      let encryptedSecretData = encryptDataNormal(cipher, modelData + ",,," + this.getParamsOutsideGraph() + ",,," + JSON.stringify(this.historySimulateData));
+
+      // 获取当前登陆的 EOA 公钥
+      let encryptPub = await getEOAPubkey(this.user);
+
+      // 将 NFT Key 用当前公钥加密
+      let encKey = await encryptDataEOA(encryptPub, key);
+      console.log("encrypted key:", encKey);
+
+      // 将 picture, secret data 上传到 IPFS
+      let picCID = await uploadToIPFS(pic);
+      let secretCID = await uploadToIPFS(encryptedSecretData);
+      // let tmp = await downloadFromIPFS(picCID);
+      // console.log("downloaded data", tmp);
+
+      // 组装 property.content TODO
+      let propertyContent = new Array();
+      for (let i = 0; i < this.ruleLists.length; i++) {
+        propertyContent.push(this.ruleLists[i]);
+      } 
+
+      // TODO (Xufei) [Done] 调用合约
+      createNFT(
+        this.user,
+        this.ruleForm.name,
+        picCID,
+        this.ruleForm.desc,
+        [JSON.stringify(propertyContent)],
+        encKey,
+        secretCID
+      ).then((chainRes) => {
+        if (chainRes.status == "success") {
+          this.$notify.success({
+            title: "Success",
+            message: "Mint NFT successful !",
+            position: "bottom-right",
+          });
+          console.log("tx response:", chainRes.response);
+
+          // TODO (Xufei) [Done] 根据合约返回的交易回执，将相关信息同步到后端
+          let params = {
+            nftId: chainRes.response.id,
+            address: chainRes.response.owner,
+            metadata: {
+              name: this.ruleForm.name,
+              desc: this.ruleForm.desc,
+              picUrl: picCID,
+              property: JSON.stringify(propertyContent),
+              key: encKey,
+              privUrl: secretCID
+            }
+          };
+
+          savemetadata(params).then((res) => {
+            if (res.message_code == this.statusCode.SUCCESSED) {
+              console.log("SUCCESS sync mint data to database");
+            } else {
+              console.error("FAIL sync mint data to database");
+            }
+          });
+
+        } else {
+          this.$notify.error({
+            title: "Error",
+            message: "Mint NFT error !",
+            position: "bottom-right",
+          });
+        }
+      });
+
     },
     changeImg(e) {
       // console.log(this.imgArr);
@@ -415,7 +434,7 @@ export default {
     // 获取画布之外的环境参数，返回值是 JSON 字符串
     getParamsOutsideGraph() {
       let res = {
-        configData: this.configData
+        configData: this.configData,
       };
 
       return JSON.stringify(res);
@@ -443,5 +462,19 @@ export default {
 .img-show {
   margin-left: 15px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+}
+.item {
+  margin: 4px;
+  float: left;
+  height: 16px;
+}
+.property-item {
+  background: #fff;
+  padding: 5px 20px;
+  border-radius: 8px;
+  line-height: 16px;
+  color: rgb(102, 101, 101);
+  border: rgb(195, 195, 195) solid 1px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
 }
 </style>

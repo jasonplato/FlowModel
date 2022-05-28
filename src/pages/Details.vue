@@ -17,11 +17,11 @@
           <div class="desc-context-box">
             <div class="desc-context-owner">
               <span><strong>Created by </strong></span>
-              <span id="creator">{{ modelData.accountAddr }}</span>            
+              <span id="creator">{{ modelData.address }}</span>
             </div>
             <div class="desc-context">
               <p>
-                {{ metadata.desc }}
+                {{ modelData.desc }}
               </p>
             </div>
             <div class="desc-context-copyright">
@@ -39,6 +39,16 @@
                 </template>
                 <div prop-box>
                   <!-- TODO -->
+                  <el-tooltip
+                    class="item"
+                    effect="light"
+                    :content="item.content"
+                    placement="bottom"
+                    v-for="item in properties"
+                    :key="item.id"
+                  >
+                    <div class="property-item">{{ item.label }}</div>
+                  </el-tooltip>
                 </div>
               </el-collapse-item>
 
@@ -69,9 +79,9 @@
         </div>
 
         <div class="infor-box">
-          <h3 class="nft-name">{{ metadata.name }}</h3>
+          <h3 class="nft-name">{{ modelData.name }}</h3>
           <span>Owned by </span>
-          <span class="current-owner">{{ modelData.accountAddr }}</span>
+          <span class="current-owner">{{ modelData.address }}</span>
         </div>
 
         <div class="sale-box">
@@ -90,11 +100,24 @@
             </i>
             <div class="btn-box">
               <el-button class="details-btn" v-if="!show">Buy Now</el-button>
-              <el-button class="details-btn details-btn-2" v-if="!show">Make Offer</el-button>
+              <el-button
+                class="details-btn details-btn-2"
+                v-if="!show"
+                @click="makeOfferDialog = true"
+                >Make Offer</el-button
+              >
+              <el-dialog
+                title="Make an offer"
+                :visible.sync="makeOfferDialog"
+                width="30%"
+                center
+              >
+                <make-offer-dialog :nftId="modelData.nftId" :closeMakeOffer="closeMakeOffer" />
+              </el-dialog>
 
-              <el-button class="details-btn" v-if="show">
+              <!-- <el-button class="details-btn" v-if="show">
                 <router-link to="/sell">Sell</router-link>
-              </el-button>
+              </el-button> -->
               <!-- 
               <el-button type="primary" v-if="show"> -->
               <el-button
@@ -104,6 +127,23 @@
               >
                 Open Model
               </el-button>
+
+              <!-- <el-button
+                class="details-btn details-btn-3"
+                v-if="show"
+                @click="offersDialog = true"
+              >
+                Offers
+              </el-button>
+
+              <el-dialog
+                title="Offers"
+                :visible.sync="offersDialog"
+                width="40%"
+                center
+              >
+                
+              </el-dialog> -->
             </div>
           </div>
 
@@ -134,7 +174,7 @@
                   <i class="el-icon-thumb"><span> Offers</span></i>
                 </template>
                 <div details-box>
-                  <!-- TODO -->
+                  <offers-dialog :offers="offers" />
                 </div>
               </el-collapse-item>
             </el-collapse>
@@ -163,9 +203,13 @@
   </div>
 </template>
 <script>
-import { querymodel } from "../api/index";
+import { querymodel, getMakeOffers } from "../api/index";
 import { mapState } from "vuex";
+import MakeOfferDialog from "../components/Detail/MakeOfferDialog.vue";
+import OffersDialog from "../components/Detail/OffersDialog.vue";
+import { downloadFromIPFS } from "../utils/ipfsUtil";
 export default {
+  components: { MakeOfferDialog, OffersDialog },
   props: {
     metadataHash: {
       type: String,
@@ -179,6 +223,10 @@ export default {
       modelMetaData: null,
       metadata: null,
       modelData: null,
+      makeOfferDialog: false,
+      offersDialog: false,
+      properties: [],
+      offers: [],
       // TODO:用户登陆 + 用户拥有该 NFT，show = false
     };
   },
@@ -203,25 +251,41 @@ export default {
     },
     initData() {
       this.modelData = JSON.parse(this.$route.query.modelData);
-      this.metadata = JSON.parse(this.modelData.metadata);
       this.loaded = true;
-      this.$nextTick(function () {
-        this.$refs.bc.style.backgroundImage =
-          "url(" + this.metadata.displayUrl + ")";
+      downloadFromIPFS(this.modelData.picUrl).then((res) => {
+        this.$nextTick(function () {
+          this.$refs.bc.style.backgroundImage = "url(" + res + ")";
+        });
       });
+      this.properties = JSON.parse(this.modelData.property);
 
-      if (this.modelData.accountAddr == this.user) {
+      if (this.modelData.address.toUpperCase() == this.user.toUpperCase()) {
         this.show = true;
       }
+
+      getMakeOffers(this.modelData.nftId).then((res) => {
+        if (res.message_code == "500") {
+          console.log(res);
+          this.offers.push({
+            buyer: res.data.buyer,
+            price: res.data.price,
+            status: res.data.status,
+            nftId: res.data.nftId,
+          });
+        }
+      });
     },
     getModelSecretData() {
       this.$router.push({
         path: "/create",
         query: {
-          metadataHash: this.metadata.metadataHash,
+          nftId: this.modelData.nftId,
         },
       });
     },
+    closeMakeOffer() {
+      this.makeOfferDialog = false;
+    }
   },
   mounted() {
     this.initData();
@@ -284,7 +348,7 @@ a {
         //border-top: 1.5px dashed rgb(80, 84, 146);
         background-repeat: no-repeat;
         background-size: 100% 100%;
-        background-image: url("https://lh3.googleusercontent.com/UMOy3Fzgia8dTXu85F8wha1b7JJO_cZcAG_TWUj_LfHfIAcKJwijZU_VPlu5Rx7nU3f-fOarY8VVSP2YQyVWyHOR3SHKckymhQgU=w600");
+        // background-image: url("https://lh3.googleusercontent.com/UMOy3Fzgia8dTXu85F8wha1b7JJO_cZcAG_TWUj_LfHfIAcKJwijZU_VPlu5Rx7nU3f-fOarY8VVSP2YQyVWyHOR3SHKckymhQgU=w600");
       }
       .desc-box {
         margin-top: 5%;
@@ -424,7 +488,12 @@ a {
             .details-btn-2 {
               color: white;
               background: -webkit-linear-gradient(40deg, #9878f9, #d849f5);
-              cursor: e-resize;
+              cursor: pointer;
+            }
+            .details-btn-3 {
+              color: white;
+              background: -webkit-linear-gradient(40deg, #d849f5, #a518c1);
+              cursor: pointer;
             }
           }
         }
@@ -437,6 +506,29 @@ a {
     height: 100px;
     margin-top: 2%;
     margin-bottom: 10%;
+  }
+  /deep/ .el-dialog__title {
+    font-weight: 600;
+  }
+  .el-dialog {
+    border-radius: 10px;
+  }
+  .item {
+    margin: 4px;
+    float: left;
+    height: 16px;
+  }
+  .property-item {
+    background: #fff;
+    padding: 3px 10px;
+    border-radius: 8px;
+    line-height: 16px;
+    color: rgb(102, 101, 101);
+    font-weight: 400;
+    border-left: 1px double rgb(76, 209, 250);
+    border-right: 1px double rgb(255, 169, 248);
+    border-bottom: 1px double rgb(207, 94, 252);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
   }
 }
 </style>

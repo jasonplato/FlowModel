@@ -2,6 +2,7 @@ import { Scheduler } from "./scheduler";
 import { Action, Stake, Unstake, Vest } from "./action";
 import { Token } from "./token";
 import { Sleep } from "./../utils/sleep";
+import { StandardNum } from "../utils/numberUtil";
 
 // var isPaused = false;
 // self.addEventListener('message', function (e) {
@@ -22,13 +23,13 @@ export class Model {
     constructor(graph, endDay, slot) {
         this.graph = graph;
         // endDay: 模型的测算终止时间
-        this.endDay = endDay;
+        this.endDay = Number(endDay);
         // slot: 模型测算的停顿窗口，每隔这一段时间模型测算过程会停顿 5s，方便操作者进行下一步的调整
-        this.slot = slot;
+        this.slot = Number(slot);
         // status: 模型处于哪个状态中 0 - off, 1 - on, 2 - pause
-        this.status = 1;
+        this.status = Number(1);
         // curDay: 模型测算的当前时间
-        this.curDay = 1;
+        this.curDay = Number(1);
         // antvNodes 保存的是原始 antv 定义的节点对象
         // TODO antvNodes 是否仅仅在初始化的时候用到？
         this.antvNodes = new Map();
@@ -174,7 +175,7 @@ export class Model {
             let tokenInstance = this.nodesInstance.get(this.tokenLabelIDMap.get(nodeData.rewardPolicyFrom));
             let rewardPolicy = {
                 // 此处 rewardTotal 指的是单个 stake 池子所能释放奖励的总量。其值取决于释放的 token 中设置的 Community Staking 总量除以可以释放该 token 的 stake 池总数  
-                rewardTotal: (tokenInstance.communityPolicy.allocations.get("Staking") * tokenInstance.allocationPercent.get("Community") * tokenInstance.totalSupply / tokenInstance.communityPolicy.stakingPool).toFixed(4),
+                rewardTotal: StandardNum(tokenInstance.communityPolicy.allocations.get("Staking") * tokenInstance.allocationPercent.get("Community") * tokenInstance.totalSupply / tokenInstance.communityPolicy.stakingPool),
                 rewardLifetime: tokenInstance.communityPolicy.stakingRewardLifetime,
                 rewardRefreshPeriod: tokenInstance.communityPolicy.stakingRewardRefreshPeriod,
                 rewardDefactor: tokenInstance.communityPolicy.stakingRewardDefactor,
@@ -353,11 +354,26 @@ export class Model {
         }
     }
 
+    // 为数据可视化功能服务，更新单次测算的总体数据，如 unstakeHistory, vestHistory 等
     updateOverallData() {
         for (let i = 0; i < this.data.length; i++) {
             // 更新 unstake 节点相关的 data，代码逻辑和实现与上面对 token 节点的处理大体相似，稍有不同
             if (this.action.unstakeLabelIDMap.has(this.data[i].type)) {
                 let originalHistory = this.nodesInstance.get(this.action.unstakeLabelIDMap.get(this.data[i].type)).unstakeHistory;
+                let orderedHistory = new Map();
+
+                // 由于 unstakeHistory 的插入顺序可能不是按天的顺序插入，所以需要重新按天排序
+                let keys = new Array();
+                for (let item of originalHistory) {
+                    keys.push(Number(item[0]));
+                }
+                keys.sort(function(a, b) {
+                    return Number(a) - Number(b);
+                });
+                for(let i = 0; i < keys.length; i++) {
+                    orderedHistory.set(Number(keys[i]), originalHistory.get(keys[i]));
+                }
+
                 let roleIdxMap = new Map();
 
                 for (let j = 0; j < this.data[i].data.length; j++) {
@@ -365,7 +381,7 @@ export class Model {
                     // roleTimedataIdxMap.set(this.data[i].data[j].type, new Map());
                 }
 
-                for (let item of originalHistory) {
+                for (let item of orderedHistory) {
                     // item: {key: 时间, value: {key:"Team", value: 100}}
                     for (let item2 of item[1]) {
                         // item2: {key: "Team", value: 100}
@@ -375,7 +391,6 @@ export class Model {
                         }
                         this.data[i].data[roleIdxMap.get(item2[0])].data.push({time: String(item[0]), value: item2[1]});
                     }
-                    
                 }
 
             }
@@ -451,7 +466,7 @@ export class Model {
             console.log("update stake data rewardPolicyFrom:", nodeData.rewardPolicyFrom);
             let rewardPolicy = {
                 // 此处 rewardTotal 指的是单个 stake 池子所能释放奖励的总量。其值取决于释放的 token 中设置的 Community Staking 总量除以可以释放该 token 的 stake 池总数  
-                rewardTotal: (tokenInstance.communityPolicy.allocations.get("Staking") * tokenInstance.allocationPercent.get("Community") * tokenInstance.totalSupply / tokenInstance.communityPolicy.stakingPool).toFixed(4),
+                rewardTotal: StandardNum(tokenInstance.communityPolicy.allocations.get("Staking") * tokenInstance.allocationPercent.get("Community") * tokenInstance.totalSupply / tokenInstance.communityPolicy.stakingPool),
                 rewardLifetime: tokenInstance.communityPolicy.stakingRewardLifetime,
                 rewardRefreshPeriod: tokenInstance.communityPolicy.stakingRewardRefreshPeriod,
                 rewardDefactor: tokenInstance.communityPolicy.stakingRewardDefactor,

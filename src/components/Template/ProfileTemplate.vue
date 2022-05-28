@@ -5,8 +5,8 @@
         v-model="searchContent"
         placeholder="Search items"
         class="serch-input"
+        suffix-icon="el-icon-search search-icon"
       ></el-input>
-      <i class="el-icon-search search-icon"></i>
     </div>
 
     <div class="select-box div-inline">
@@ -67,7 +67,7 @@ import ExploreTemplate from "./ExploreTemplate";
 import PaginationTemplate from ".//PaginationTemplate";
 import { mapState } from "vuex";
 
-import { querymetadata } from "../../api/index";
+import { getnfts } from "../../api/index";
 export default {
   data() {
     return {
@@ -138,16 +138,17 @@ export default {
     },
     queryList(accountAddr, begin, end) {
       const req = {
-        accountAddr: accountAddr,
+        address: accountAddr,
         begin: begin,
         end: end,
       };
-      querymetadata(req).then((res) => {
+      getnfts(req).then((res) => {
         if (res.message_code == this.statusCode.SUCCESSED) {
           const data = JSON.parse(res.data);
           this.totalPage = Number(data.totalNum);
-          // console.log(this.totalPage);
-          this.dataList = JSON.parse(data.metadata);
+          this.dataList = data.metadata;
+        } else {
+          console.log(res);
         }
       });
     },
@@ -193,10 +194,10 @@ export default {
       font-weight: 600;
       line-height: 40px;
       cursor: wait;
-      color: #49e4f5;
+      color: #e3e5e6;
     }
     .search-icon:hover {
-      color: #b074f5;
+      color: #ccc9cc;
     }
   }
   .select-box {
@@ -222,12 +223,13 @@ export default {
       margin-left: 3%;
       font-weight: 300;
       line-height: 40px;
-      color: #c191f7;
+      color: #ccc9cc;
     }
     .el-icon-s-grid {
       margin-left: 3%;
       font-weight: 400;
       line-height: 40px;
+      color: #e3e5e6;
     }
   }
   .show-items {

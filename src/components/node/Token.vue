@@ -27,11 +27,16 @@
               <p>{{ item.name }}</p>
               <el-slider
                 v-model="item.prop"
+                show-input=true
+                input-size="mini"
                 :class="item.class"
                 @change="propChange(item, tokenData.allocations)"
               ></el-slider>
+              
+              <span></span>
               <span>{{ item.prop }}%</span>
             </div>
+
             <!-- Community -->
             <el-collapse
               v-model="activeNames"
@@ -107,7 +112,7 @@ export default {
   mixins: [nodeMixin],
   data() {
     return {
-      activeNames: [],
+      activeNames: ["1","2"],
     };
   },
   methods: {
@@ -159,7 +164,7 @@ export default {
       .team-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(79, 127, 185);
         }
@@ -172,7 +177,7 @@ export default {
       .investor-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(111, 88, 194);
         }
@@ -184,7 +189,7 @@ export default {
       .advisor-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(147, 46, 167);
         }
@@ -196,7 +201,7 @@ export default {
       .foundation-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(192, 65, 137);
         }
@@ -209,7 +214,7 @@ export default {
       .community-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: #f56c6c;
         }
@@ -217,65 +222,14 @@ export default {
           border: 2px solid #f56c6c;
           transition: 0s;
         }
-      }
-      /* .team-slider {
-        float: left;
-        margin-left: 15px;
-        width: 200px;
-        /deep/ .el-slider__bar {
-          background-color: orange;
-        }
-        /deep/ .el-slider__button {
-          border: 2px solid orange;
-          transition: 0s;
-        }
+        /* /deep/ .el-slider__input {
+          width: 90px;
+          float: left;
+          margin-left: 50px;
+          //margin-right: 0px;
+        } */
       }
 
-      .investor-slider {
-        float: left;
-        margin-left: 15px;
-        width: 200px;
-        /deep/ .el-slider__bar {
-          background-color: green;
-        }
-        /deep/ .el-slider__button {
-          border: 2px solid green;
-          transition: 0s;
-        }
-      }
-      .advisor-slider {
-        float: left;
-        margin-left: 15px;
-        width: 200px;
-        /deep/ .el-slider__button {
-          transition: 0s;
-        }
-      }
-      .foundation-slider {
-        float: left;
-        margin-left: 15px;
-        width: 200px;
-        /deep/ .el-slider__bar {
-          background-color: rgb(223, 219, 17);
-        }
-        /deep/ .el-slider__button {
-          border: 2px solid rgb(223, 219, 17);
-          transition: 0s;
-        }
-      }
-
-      .community-slider {
-        float: left;
-        margin-left: 15px;
-        width: 200px;
-        /deep/ .el-slider__bar {
-          background-color: #f56c6c;
-        }
-        /deep/ .el-slider__button {
-          border: 2px solid #f56c6c;
-          transition: 0s;
-        }
-      } */
       span {
         margin-left: 10px;
         font-size: 14px;
@@ -288,7 +242,7 @@ export default {
       .airdrop-turntable {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__button {
           transition: 0s;
         }
@@ -297,7 +251,7 @@ export default {
       .staking-turntable {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(73, 154, 160);
         }
@@ -309,7 +263,7 @@ export default {
       /* Staking Reward Decrease Factor*/
       .community-item-slider {
         float: left;
-        width: 200px;
+        width: 190px;
         margin-left: 15px;
         /deep/ .el-slider__bar {
           background-color: rgb(51, 122, 128);

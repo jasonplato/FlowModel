@@ -63,6 +63,7 @@
 <script>
 import { mapState, mapMutations, mapActions } from "vuex";
 import { setStore, getStore } from "../utils/storage";
+import { setupIPFS } from "../utils/ipfsUtil";
 import {
   connectMetamask,
   accountChangeListener,
@@ -167,6 +168,8 @@ export default {
     logout() {},
   },
   mounted() {
+    // 连接 IPFS 服务
+    setupIPFS();
     this.initProvider();
     accountChangeListener(this.connect);
     this.initUser();

@@ -50,13 +50,18 @@ export default {
 </script>
 <style lang="scss" scoped>
 .container {
-  height: 90%;
+  position: fixed;
+  height: calc(100% - 180px);
   width: 300px;
+  right: calc(100% - (100% - 250px) - 195px);
   background-color: #ffffff;
   overflow: scroll;
-  margin-top: 13%;
-  border-left: 1px solid rgb(232, 231, 231);
+  margin-top: 70px;
+  border-radius: 30px;
+  border: 2.5px solid rgb(232, 231, 231);
+  box-shadow: 0 0 1px rgba(219, 218, 218, 0.8);
   .container-title {
+    margin: 2%;
     background-color: #fff;
     height: 32px;
     line-height: 32px;

@@ -34,6 +34,13 @@
 </template>
 <script>
 import { mapState, mapMutations } from "vuex";
+
+const antlr4 = require("antlr4");
+const InputStream = antlr4.InputStream;
+const CommonTokenStream = antlr4.CommonTokenStream;
+const GrammarParser = require("../../parser/PropertyParser").PropertyParser;
+const GrammarLexer = require("../../parser/PropertyLexer").PropertyLexer;
+
 export default {
   data() {
     return {
@@ -44,17 +51,27 @@ export default {
   methods: {
     ...mapMutations(["SAVE_EDIT_RULE"]),
     edit() {
+      // 每次编辑完 / 修改完 property 之后，property 的 status 应重置为 false
+      this.newRule.status = false;
       try {
+        // 对于用户输入的 property 进行语法检查
         const inputStream = new InputStream(this.newRule.content);
         const lexer = new GrammarLexer(inputStream);
         const tokenStream = new CommonTokenStream(lexer);
         const parser = new GrammarParser(tokenStream);
+        parser.removeErrorListeners();
+        parser.addErrorListener({
+          syntaxError: (recognizer, offendingSymbol, line, column, msg, err) => {
+            console.error(`${offendingSymbol} line ${line}, col ${column}: ${msg}`);
+            throw err;
+          }
+        });
         const tree = parser.check();
-        console.log(tree.getChild(1));
+
+        // 语法检查通过后，保存 property
         this.SAVE_EDIT_RULE(this.newRule);
         this.ruleEditShow.show = false;
       } catch {
-        // TODO 对于语法错误的情况，try-catch
         alert("Wrong Grammar!");
       }
       

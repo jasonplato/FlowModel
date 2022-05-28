@@ -30,7 +30,7 @@
               <ProfileTemplate />
             </el-tab-pane>
 
-            <el-tab-pane label="Create" name="two">
+            <el-tab-pane label="Created" name="two">
               <ProfileTemplate />
             </el-tab-pane>
 

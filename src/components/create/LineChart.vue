@@ -141,6 +141,10 @@ export default {
             },
           },
         },
+        slider:{
+          start:0,
+          end:1
+        }
       });
       if (this.linedata.length != 0) {
         this.LinePlot.render();

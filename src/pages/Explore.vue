@@ -9,16 +9,16 @@
           <div @click="gotoDetailPage(item)">
             <ExploreTemplate :modelData="item" />
             <!-- <router-link to="/details"
-              ><ExploreTemplate :modelData="item"
-            /></router-link> -->
+                  ><ExploreTemplate :modelData="item"
+                /></router-link> -->
           </div>
 
           <!-- <router-link to="/details">
-            <div class="image-box"></div>
-          </router-link>
-          <router-link to="/details"
-            ><ExploreTemplate :modelData="item"
-          /></router-link> -->
+                <div class="image-box"></div>
+              </router-link>
+              <router-link to="/details"
+                ><ExploreTemplate :modelData="item"
+              /></router-link> -->
         </div>
 
         <div class="block">
@@ -34,7 +34,7 @@
 <script>
 import PaginationTemplate from "../components/Template/PaginationTemplate";
 import ExploreTemplate from "../components/Template/ExploreTemplate";
-import { querymetadata } from "../api/index";
+import { getnfts } from "../api/index";
 import { mapState, mapMutations } from "vuex";
 export default {
   data() {
@@ -49,16 +49,17 @@ export default {
     ...mapMutations(["SET_DETAIL_MODEL_DATA"]),
     queryList(accountAddr, begin, end) {
       const req = {
-        accountAddr: accountAddr,
+        address: accountAddr,
         begin: begin,
         end: end,
       };
-      querymetadata(req).then((res) => {
+      getnfts(req).then((res) => {
+        console.log(res);
         if (res.message_code == this.statusCode.SUCCESSED) {
           const data = JSON.parse(res.data);
           this.totalPage = Number(data.totalNum);
-          // console.log(this.totalPage);
-          this.dataList = JSON.parse(data.metadata);
+          // // console.log(this.totalPage);
+          this.dataList = data.metadata;
         }
       });
     },
@@ -107,17 +108,19 @@ export default {
     background-image: linear-gradient(to right, #4bf8ef, #f879e3);
   }
   .items {
-    width: 80%;
-    margin: 0px auto;
+    padding-left: 8%;
+    //width: 100%;
+    //margin-left: 5%;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
 
     .item {
-      width: 300px;
+      width: calc((100%-160px) / 5);
       position: relative;
       border-radius: 10px 10px 10px 10px;
-      margin: 20px 20px;
+      margin-right: 40px;
+      margin-bottom: 40px;
       background: -webkit-linear-gradient(40deg, #37e2f5, #f574f5);
       border-radius: 10px;
 

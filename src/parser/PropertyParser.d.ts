@@ -6,6 +6,22 @@ export declare class CheckContext extends ParserRuleContext {
     
 }
 
+export declare class TimeContext extends ParserRuleContext {
+    
+    INT(): TerminalNode;
+    
+}
+
+export declare class RoleContext extends ParserRuleContext {
+    
+}
+
+export declare class ExprContext extends ParserRuleContext {
+    
+    INT(): TerminalNode;
+    
+}
+
 
 export declare class PropertyParser extends Parser {
     readonly ruleNames: string[];
@@ -15,5 +31,11 @@ export declare class PropertyParser extends Parser {
     constructor(input: CommonTokenStream);
     
     check(): CheckContext;
+
+    time(): TimeContext;
+
+    role(): RoleContext;
+
+    expr(): ExprContext;
 
 }

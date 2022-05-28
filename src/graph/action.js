@@ -1,6 +1,7 @@
 import { Token } from "./token";
-import { result } from 'lodash';
-import { pow, divide, multiply, subtract, chain, sum } from 'mathjs';
+import { pow, divide, subtract, chain } from 'mathjs';
+import { NonNegative, StandardNum } from "../utils/numberUtil";
+import { mapInit } from "../utils/mapInit";
 export class Action {
 
     constructor() {
@@ -68,11 +69,11 @@ export class Stake {
         // rewardAllocatedDelta: stake 已经产生的奖励分配 增量数据
         this.rewardAllocatedDelta = new Map();
         // rewardAllocatedTotal: stake 已经产生的奖励总量
-        this.rewardAllocatedTotal = 0;
+        this.rewardAllocatedTotal = Number(0);
         // rewardList: 保存了每天可以释放的 reward 量
         this.rewardList = this.calculateRewardList(this.rewardTotal, this.rewardLifetime, this.rewardRefreshPeriod, this.rewardDefactor);
         // rewardIdx: 记录当前奖励释放的进度
-        this.rewardIdx = 0;
+        this.rewardIdx = Number(0);
 
         stakeAmount.forEach(element => {
             // 获取 stakeAmount 数据
@@ -81,8 +82,8 @@ export class Stake {
             // this.inPoolAmount.set(element.name, 0);
             // this.inPoolAmountDelta.set(element.name, 0);
             // rewardAllocated 表示已经分配的收益
-            this.rewardAllocated.set(element.name, 0);
-            this.rewardAllocatedDelta.set(element.name, 0);
+            this.rewardAllocated.set(element.name, Number(0));
+            this.rewardAllocatedDelta.set(element.name, Number(0));
         })
 
         console.log(this.label, "::Stake: reward total:", this.rewardTotal);
@@ -129,7 +130,7 @@ export class Stake {
             for (let item of preNode.stakedAmountDelta) {
                 if (preNode.freeMoney.has(item[0])) {
                     // TODO [Done] 如果增量数据为 0，就跳过
-                    let delta = Number((preNode.freeMoney.get(item[0]) * this.stakeAmount.get(item[0])).toFixed(4));
+                    let delta = StandardNum(preNode.freeMoney.get(item[0]) * this.stakeAmount.get(item[0]));
                     if (delta <= 0.0)
                         continue;
                     item[1] += delta;
@@ -150,7 +151,7 @@ export class Stake {
                 console.log(this.label,"::Stake: curent reward:", curReward);
                 for (let item of this.rewardAllocatedDelta) {
                     // TODO [Done] 增量数据如果为0，就跳过
-                    let delta = Number((preNode.stakedAmount.get(item[0]) / preNode.stakedTotal * curReward).toFixed(4));
+                    let delta = StandardNum(preNode.stakedAmount.get(item[0]) / preNode.stakedTotal * curReward);
                     if (delta <= 0.0)
                         continue;
                     item[1] += delta;
@@ -183,10 +184,10 @@ export class Stake {
         // }
 
         for (let item of this.rewardAllocated) {
-            item[1] += this.rewardAllocatedDelta.get(item[0]);
-            this.rewardAllocated.set(item[0], item[1]);
-            this.rewardAllocatedTotal += this.rewardAllocatedDelta.get(item[0]);
-            this.rewardAllocatedDelta.set(item[0], 0);
+            item[1] = NonNegative(item[1] + this.rewardAllocatedDelta.get(item[0]));
+            this.rewardAllocated.set(item[0], Number(item[1]));
+            this.rewardAllocatedTotal = NonNegative(this.rewardAllocatedTotal + this.rewardAllocatedDelta.get(item[0]));
+            this.rewardAllocatedDelta.set(item[0], Number(0));
         }
 
         console.log(this.label, "::Stake: rewardAllocated:", this.rewardAllocated);
@@ -213,15 +214,15 @@ export class Stake {
         const periodNum = divide(totalTime, periodTime);
         const dividend = subtract(1, defactor);
         const divisor = subtract(1, pow(defactor, periodNum));
-        let releaseBase = Number(chain(totalAmount).multiply(dividend).divide(divisor)).toFixed(4);
+        let releaseBase = StandardNum(chain(totalAmount).multiply(dividend).divide(divisor));
         if (defactor == 1.0) {
-            releaseBase = Number(chain(totalAmount).divide(periodNum)).toFixed(4);
+            releaseBase = StandardNum(chain(totalAmount).divide(periodNum));
         }
 
         let res = [];
         for (let i = 0;i < totalTime; i++) {
             let curPeriod = Math.floor(i / periodTime);
-            let tmp = Number((releaseBase * pow(defactor, curPeriod) / periodTime).toFixed(4));
+            let tmp = StandardNum(releaseBase * pow(defactor, curPeriod) / periodTime);
             res.push(tmp);
             
         }
@@ -291,10 +292,13 @@ export class Unstake {
             // console.log(this.label, "::pre Node is: ", preNode.symbol);
             let unStakeRecord = new Map();
             for (let item of this.unstakeAmount) {
-                let amount = Number((preNode.stakedAmount.get(item[0]) * item[1]).toFixed(4));
+                let amount = StandardNum(preNode.stakedAmount.get(item[0]) * item[1]);
                 // 如果当前参与方 unstake 的 <=  0，跳过
-                if (amount <= 0.0) 
+                if (amount <= 0.0) {
+                    // unStakeRecord.set(item[0], Number(0));
                     continue;
+                }
+                    
                 let stakeDelta = preNode.stakedAmountDelta.get(item[0]) - amount;
                 preNode.stakedAmountDelta.set(item[0], stakeDelta);
                 unStakeRecord.set(item[0], amount);
@@ -305,14 +309,16 @@ export class Unstake {
                 
                 for (let item of unStakeRecord) {
                     if (!this.unstakeHistory.has(curDay + this.coolTime)) {
-                        this.unstakeHistory.set(curDay + this.coolTime, new Map());
+                        // 为什么需要各参与者的数值初始化为0？因为 antv 数据可视化效果需要
+                        this.unstakeHistory.set(curDay + this.coolTime, mapInit(this.unstakeAmount.keys()));
                     }
 
                     let old = this.unstakeHistory.get(curDay + this.coolTime).get(item[0]);
-                    if (old == undefined) old = 0;
+                    if (old == undefined) old = Number(0);
                     old += item[1];
 
-                    this.unstakeHistory.get(curDay + this.coolTime).set(item[0], item[1]);
+                    // TODO (xufei) item[1] 换成 old？
+                    this.unstakeHistory.get(curDay + this.coolTime).set(item[0], old);
                 }
                
             }
@@ -427,10 +433,13 @@ export class Vest {
             if(preNode.totalSupply > 0 && preNode.canVest == 1) {
                 // 对于项目发行代币，vest 的对象是初始分配的币量
                 for (let item of this.vestAmount) {
-                    let amount = Number(((preNode.allocationPercent.get(item[0]) * preNode.totalSupply - preNode.allocatedAmount.get(item[0])) * item[1]).toFixed(4));
+                    let amount = StandardNum((preNode.allocationPercent.get(item[0]) * preNode.totalSupply - preNode.allocatedAmount.get(item[0])) * item[1]);
                     // 对于 amount <= 0 的情况，不插入到 vestRecord 里
-                    if (amount <= 0.0)
+                    if (amount <= 0.0) {
+                        // vestRecord.set(item[0], Number(0));
                         continue;
+                    }
+                        
                     preNode.allocatedAmountDelta.set(item[0], preNode.allocatedAmountDelta.get(item[0]) + amount);
 
                     vestRecord.set(item[0], amount);
@@ -439,10 +448,13 @@ export class Vest {
             } else if (preNode.totalSupply <= 0 ) {
                 // 对于非项目发行代币，vest 的对象可能是 freeMoney 部分
                 for (let item of this.vestAmount) {
-                    let amount = Number((preNode.freeMoney.get(item[0]) * item[1]).toFixed(4));
+                    let amount = StandardNum(preNode.freeMoney.get(item[0]) * item[1]);
                     // 对于 amount <= 0 的情况，不插入到 vestRecord 里
-                    if (amount <= 0.0)
+                    if (amount <= 0.0) {
+                        // vestRecord.set(item[0], Number(0));
                         continue;
+                    }
+                        
                     preNode.freeMoneyDelta.set(item[0], preNode.freeMoneyDelta.get(item[0]) - amount);
                     vestRecord.set(item[0], amount);
                 }
@@ -457,7 +469,7 @@ export class Vest {
                     let releaseNumber = Math.floor(this.vestPolicy.get(item[0]).lockupTime / releasePeriod);
                     let cliff = this.vestPolicy.get(item[0]).cliff;
                     if (cliff == 0) releaseNumber++;
-                    let releaseAmount = Number((item[1] / releaseNumber).toFixed(4));
+                    let releaseAmount = StandardNum(item[1] / releaseNumber);
                     
                     if (this.vestPolicy.get(item[0]).lockupTime == 0 || releasePeriod == 0 ) {
                         releaseNumber = 1;
@@ -467,7 +479,8 @@ export class Vest {
                     for (let i = 0; i < releaseNumber; i++) {
                         // 如果 vestHistory 里没有 curDay + cliff + i * releasePeriod 的记录时，初始化
                         if (!this.vestHistory.has(curDay + cliff + i * releasePeriod)) {
-                            this.vestHistory.set(curDay + cliff + i * releasePeriod, new Map());
+                            // 为什么需要各参与者的数值初始化为0？因为 antv 数据可视化效果需要
+                            this.vestHistory.set(curDay + cliff + i * releasePeriod, mapInit(this.vestAmount.keys()));
                         } 
                         // 将这次计算需要通过 vest 释放的 amount 累加到历史数据上
                         let old = this.vestHistory.get(curDay + cliff + i * releasePeriod);
@@ -528,6 +541,8 @@ export class Vest {
         this.label = label;
         vestAmount.forEach(element => {
             this.vestAmount.set(element.name, Number(element.prop) / 100);
+            this.vestPolicy.set(element.name, {lockupTime: Number(element.lockUpTime), releasePeriod: Number(element.releasePeriod), cliff: Number(element.cliff)});
         })
+
     }
 }

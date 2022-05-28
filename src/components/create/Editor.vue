@@ -36,12 +36,15 @@
         </div>
       </div>
       <!-- 工具导航栏 -->
-      <div class="tools-navbar">
+      <!-- <div class="tools-navbar">
         <div class="tools-navbar" id="tools-navbar">
           <ToolsNavbar />
         </div>
-      </div>
+      </div> -->
       <!-- 右侧控件 -->
+      <div class="right-default">
+        <ToolsNavbar />
+      </div>
       <transition name="el-fade-in-linear">
         <div class="right-container" v-bind:class="{ show: nodeEditShow }">
           <NodeEdit :closeNodeEdit="closeNodeEdit" />
@@ -57,14 +60,11 @@
     <el-dialog
       title="Modeling data visualization"
       :visible.sync="visualPanelVisible"
-      width="60%"
+      class="data-dialog"
+      width="1200px"
     >
       <VisualPanel />
     </el-dialog>
-    <!-- 模型导入面板 -->
-    <!-- <el-dialog title="Model upload" :visible.sync="uploadShow" width="60%">
-      <ModelUpload />
-    </el-dialog> -->
   </div>
 </template>
 
@@ -72,7 +72,7 @@
 import VisualPanel from "./VisualPanel";
 import ModelUpload from "./ModelUpload";
 import NodeEdit from "./NodeEdit";
-import ToolsNavbar from "./ToolsNavbar";
+import ToolsNavbar from "./RightToolsNavbar";
 import MintForm from "../Template/MintForm";
 import RuleList from "../create/RuleList";
 import { Addon, Graph, Shape } from "@antv/x6";
@@ -84,12 +84,9 @@ import { mapState, mapMutations } from "vuex";
 import { querymodel } from "../../api/index";
 import { setStore } from "../../utils/storage";
 import { connectMetamask } from "../../api/web3/contracts";
-
-const antlr4 = require("antlr4");
-const InputStream = antlr4.InputStream;
-const CommonTokenStream = antlr4.CommonTokenStream;
-const GrammarParser = require("../../parser/PropertyParser").PropertyParser;
-const GrammarLexer = require("../../parser/PropertyLexer").PropertyLexer;
+import { downloadFromIPFS } from "../../utils/ipfsUtil";
+import { querymetadata } from "../../api/index";
+import { decryptDataEOA, decryptDataNormal } from "../../utils/cryptoUtil";
 
 export default {
   data() {
@@ -567,7 +564,7 @@ export default {
       this.centerDialogVisible = false;
     },
     loadGraphFromBack() {
-      if (this.$route.query.metadataHash == null) {
+      if (this.$route.query.nftId == null) {
         //导入已有节点信息
         this.LOAD_GRAPH();
         //进行一次聚焦
@@ -579,35 +576,37 @@ export default {
         if (response.status) {
           this.SET_USER(response.account[0]);
 
-          const req = {
-            accountAddr: this.user,
-            metadataHash: this.$route.query.metadataHash,
-          };
-          querymodel(req).then((res) => {
-            if (res.message_code == this.statusCode.SUCCESSED) {
-              const modelData = JSON.parse(res.data.modelData);
-              const results = JSON.parse(res.data.results);
-              this.MODIFY_HISTORY_SIMULATE_DATA(results);
-              const params = JSON.parse(res.data.params);
-              this.MODIFY_CONFIGDATA([
-                params.configData.simulationDays,
-                params.configData.simulationSlot,
-              ]);
-              setStore("graph", modelData);
+          querymetadata(this.$route.query.nftId).then((metadata) => {
+            if (metadata.message_code == this.statusCode.SUCCESSED) {
+              console.log("SUCCESS sync mint data to database");
 
-              //导入已有节点信息
-              this.LOAD_GRAPH();
-              //进行一次聚焦
-              this.POSITIONING_GRAPH();
+              decryptDataEOA(metadata.data.enckey, this.user).then((decryptKey) => {
+                // TODO 对secret data 解密
+                // let decryptSecretData = decryptDataNormal();
+                downloadFromIPFS(metadata.data.privUrl).then((secretData) => {
+                  let decrypted = decryptDataNormal(secretData, decryptKey);
+                  let subSecretData = decrypted.split(",,,");
+
+                  let params = subSecretData[1];
+                  let result = subSecretData[2];
+
+                  setStore("graph", subSecretData[0]);
+                  params = JSON.parse(params);
+                  this.MODIFY_CONFIGDATA([
+                    params.configData.simulationDays,
+                    params.configData.simulationSlot,
+                  ]);
+                  this.MODIFY_HISTORY_SIMULATE_DATA(JSON.parse(result));
+                   
+                  //导入已有节点信息
+                  this.LOAD_GRAPH();
+                  //进行一次聚焦
+                  this.POSITIONING_GRAPH();
+                });
+              });
+
             } else {
-              this.$notify.error({
-                title: "Error",
-                message: "Identity verification failed!",
-                position: "bottom-right",
-              });
-              this.$router.push({
-                path: "/create",
-              });
+              console.error("FAIL sync mint data to database");
             }
           });
         } else {
@@ -637,7 +636,6 @@ export default {
     //初始化相关监听事件
     this.initWatchEvent();
     this.LOAD_RULE_LISTS();
-    
   },
   computed: {
     ...mapState([
@@ -667,6 +665,7 @@ export default {
   .draw {
     .left-container {
       width: 200px;
+      height: 100%;
       .left {
         position: fixed;
         top: 120px;
@@ -713,6 +712,7 @@ export default {
         left: 60px;
         border-radius: 20px;
         box-shadow: 0 0 6px rgba(180, 180, 180, 0.8);
+        height: calc(100% - 580px);
       }
     }
 
@@ -727,9 +727,12 @@ export default {
       .editor-section {
         display: flex;
         // overflow: scroll;
-        margin: 40px auto;
-        width: 90%;
-        height: 70%;
+        margin-top: 40px;
+        margin-left: 60px;
+        //width: 70%;
+        left: 250px;
+        width: calc(100% - 480px);
+        height: calc(100% - 180px);
         // border: solid 2px #f4f4f4;
         box-shadow: 0 0 6px rgba(180, 180, 180, 0.8);
         border-radius: 30px;
@@ -747,12 +750,49 @@ export default {
         }
       }
     }
+    .right-default {
+      /* position: fixed;
+      height: calc(100% - 180px);
+      width: 280px;
+      top: 120px;
+      right: 3%;
+      background-color: #ffffff;
+      overflow: scroll;
+      border-radius: 30px;
+      border: 1px solid rgb(232, 231, 231);
+      box-shadow: 0 0 3px rgba(180, 180, 180, 0.8);  */
+
+      .config-data-input {
+        width: 200px;
+        margin-left: 15px;
+        margin-top: 20px;
+      }
+      .day-slider {
+        margin-left: 15px;
+        margin-bottom: 20px;
+        width: 250px;
+        /deep/ .el-slider__bar {
+          background-color: rgb(94, 91, 91);
+        }
+        /deep/ .el-slider__button {
+          border: 2px solid rgb(94, 91, 91);
+          transition: 0s;
+        }
+      }
+      .timer {
+        float: left;
+
+        // margin: 7px 0px 0px 15px;
+
+        width: 20px;
+      }
+    }
     .right-container {
       width: 300px;
       position: fixed;
       top: 50px;
       right: 0px;
-      height: 100%;
+      height: 82.5%;
     }
   }
   .data-visual-panel {
@@ -792,6 +832,10 @@ export default {
       box-shadow: 0 0 6px rgba(180, 180, 180, 0.8) !important;
       border-radius: 20px;
     }
+  }
+  .data-dialog {
+    position: relative;
+    top: -130px;
   }
   .show {
     visibility: hidden;

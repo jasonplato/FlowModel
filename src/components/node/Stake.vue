@@ -27,7 +27,12 @@
               :key="item.name"
             >
               <p>{{ item.name }}</p>
-              <el-slider v-model="item.prop" :class="item.class"></el-slider>
+              <el-slider 
+                v-model="item.prop" 
+                :class="item.class"
+                show-input=true
+                input-size="mini"
+              ></el-slider>
               <span>{{ item.prop }}%</span>
             </div>
           </el-collapse-item>
@@ -44,7 +49,7 @@ export default {
   props: ["nodeData"],
   data() {
     return {
-      activeNames: [],
+      activeNames: ["1"],
     };
   },
   methods: {
@@ -76,7 +81,7 @@ export default {
       font-size: 14px;
     }
     .reward-policy-from-input {
-      margin-left: 20px;
+      margin-left: 10px;
       width: 115px;
     }
   }
@@ -130,7 +135,7 @@ export default {
       .team-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(79, 127, 185);
         }
@@ -143,7 +148,7 @@ export default {
       .investor-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(111, 88, 194);
         }
@@ -155,7 +160,7 @@ export default {
       .advisor-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(147, 46, 167);
         }
@@ -167,7 +172,7 @@ export default {
       .foundation-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: rgb(192, 65, 137);
         }
@@ -180,7 +185,7 @@ export default {
       .community-slider {
         float: left;
         margin-left: 15px;
-        width: 200px;
+        width: 190px;
         /deep/ .el-slider__bar {
           background-color: #f56c6c;
         }

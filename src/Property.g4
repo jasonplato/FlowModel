@@ -1,5 +1,8 @@
 grammar Property;
-check  : 'After' INT 'days' ID '.' ID (EQUALS | NOT_EQUALS | LESS_THAN | LESS_OR_EQUALS | GREATER_THAN | GREATER_OR_EQUALS)+ INT '%';         // match keyword hello followed by an identifier
+check  : time+  role+ expr+;     
+time   : 'After' INT 'days';
+role   : ID '.' ID;
+expr   : (EQUALS | NOT_EQUALS | LESS_THAN | LESS_OR_EQUALS | GREATER_THAN | GREATER_OR_EQUALS)+ INT '%';
 
 INT : [0-9]+ ;                  // match number
 ID  : [A-Za-z]+ ;                  // match alphabet

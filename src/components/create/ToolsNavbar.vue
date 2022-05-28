@@ -172,9 +172,16 @@
 <script>
 import { mapState, mapMutations } from "vuex";
 import { Model } from "../../graph/model";
-import { floor } from "mathjs";
 import { DataUri } from "@antv/x6";
 import { setStore } from "../../utils/storage";
+import { PropertyVisitor } from "../../graph/propertyVisitor";
+
+const antlr4 = require("antlr4");
+const InputStream = antlr4.InputStream;
+const CommonTokenStream = antlr4.CommonTokenStream;
+const GrammarParser = require("../../parser/PropertyParser").PropertyParser;
+const GrammarLexer = require("../../parser/PropertyLexer").PropertyLexer;
+
 export default {
   data() {
     return {
@@ -291,6 +298,8 @@ export default {
 
       //  测算终止（正常终止 / 暂停终止），关闭 loading 图标
       this.nowait = true;
+
+      this.checkProperty();
     },
     /*
     暂停测算
@@ -355,9 +364,36 @@ export default {
       if (this.model == null) return 0;
       return this.model.curDay;
     },
+    /**
+     * 检查 Property 列表中的所有 Property
+     */
+    checkProperty() {
+      for (let i = 0; i < this.ruleLists.length; i++) {
+        const inputStream = new InputStream(this.ruleLists[i].content);
+        const lexer = new GrammarLexer(inputStream);
+        const tokenStream = new CommonTokenStream(lexer);
+        const parser = new GrammarParser(tokenStream);
+        parser.removeErrorListeners();
+        parser.addErrorListener({
+          syntaxError: (recognizer, offendingSymbol, line, column, msg, err) => {
+            console.error(`${offendingSymbol} line ${line}, col ${column}: ${msg}`);
+            throw err;
+          }
+        });
+        const tree = parser.check();
+        // parser.getInvokingContext()
+        let visitor = new PropertyVisitor(this.model.curDay, this.historySimulateData[this.historySimulateData.length - 1].data, this.graph.model.getNodes());
+        tree.accept(visitor);
+        if (visitor.state >= 4) {
+          this.ruleLists[i].status = true;
+        }
+      }
+      
+    }
+
   },
   computed: {
-    ...mapState(["configData", "graph", "model", "nonce"]),
+    ...mapState(["configData", "graph", "model", "nonce", "ruleLists", "historySimulateData"]),
   },
   mounted() {},
 };

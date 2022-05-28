@@ -1,6 +1,10 @@
 <template >
   <el-collapse-transition>
     <div class="visual-panel">
+      <span class="help"
+        ><i class="el-icon-question" @click="helpShow = !helpShow"></i>
+      </span>
+
       <div class="charts-container">
         <!-- 调用作图组件，传入对应的数据包含折线图数据、x轴字段名、y、分类字段名 -->
         <LineChart :linedata="lineData" />
@@ -39,6 +43,24 @@
           </el-table>
         </div>
       </div>
+
+      <div class="help-container" :class="{ helpShow: helpShow }">
+        <span
+          ><i class="el-icon-warning" style="color: red"></i>For different types of nodes selected in visual panel, visual data has different meanings: 
+          <div
+            >Token: data shows the token amount of a participant holds that he can use immediately</div
+          >
+          <div
+            >Stake: data shows the accumulated reward amount of a participant in this staking pool</div
+          >
+          <div
+            >Unstake: data shows the daily unstaked token amount from corresponding staking pool</div
+          >
+          <div
+            >Vest: data shows the daily vested token amount for a participant, following the vest policy</div
+          ></span
+        >
+      </div>
     </div>
   </el-collapse-transition>
 </template>
@@ -48,6 +70,7 @@ import { mapState, mapMutations } from "vuex";
 export default {
   data() {
     return {
+      helpShow: false,
       //被选中的历史数据项
       multipleSelection: null,
       //折线图数据
@@ -97,15 +120,42 @@ export default {
 <style lang="scss">
 .visual-panel {
   text-align: center;
-  overflow: hidden;
+  overflow: scroll;
   background-color: #f5f5f5;
+  .help {
+    position: absolute;
+    top: 20px;
+    left: 230px;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .help-container {
+    float: left;
+    padding: 0px 20px 0px 20px;
+    margin-left: 15px;
+    margin-bottom: 5px;
+    width: 94%;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0);
+    text-align: left;
+    span {
+      padding-left: 10px;
+      .el-icon-warning {
+        font-size: 20px;
+      }
+    }
+    div {
+      padding-left: 30px;
+      font-size: 10px;
+    }
+  }
   .charts-container {
     float: left;
     padding: 0px 20px 0px 20px;
     margin-left: 15px;
     margin-top: 10px;
     width: 68%;
-    height: 70%;
+    height: 60%;
 
     background-color: #fff;
     border: 1px solid rgb(228, 228, 228);
@@ -116,7 +166,7 @@ export default {
     margin-top: 30px;
     margin-left: 30px;
     width: 22%;
-    height: 100%;
+    height: 70%;
 
     .select-title {
       display: block;
@@ -139,6 +189,9 @@ export default {
     .history-table {
       border-radius: 10px;
     }
+  }
+  .helpShow {
+    display: none;
   }
 }
 </style>

@@ -18,5 +18,23 @@ PropertyVisitor.prototype.visitCheck = function(ctx) {
 };
 
 
+// Visit a parse tree produced by PropertyParser#time.
+PropertyVisitor.prototype.visitTime = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by PropertyParser#role.
+PropertyVisitor.prototype.visitRole = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
+// Visit a parse tree produced by PropertyParser#expr.
+PropertyVisitor.prototype.visitExpr = function(ctx) {
+  return this.visitChildren(ctx);
+};
+
+
 
 exports.PropertyVisitor = PropertyVisitor;

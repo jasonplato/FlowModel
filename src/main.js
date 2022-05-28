@@ -8,6 +8,9 @@ import 'viewerjs/dist/viewer.css'
 
 import store from './store'
 import router from './router'
+
+import './assets/AliIcon/iconfont'
+import './assets/AliIcon/iconfont.css'
 Vue.use(ElementUI)
 Vue.use(Viewer, {
   defaultOptions: {

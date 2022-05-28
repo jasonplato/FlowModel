@@ -16,16 +16,22 @@
       </div>
     </div>
     <div class="buy-and-collect-box">
-      <div class="buy-box">
+      <!-- <div class="buy-box">
         <el-button type="text">Buy Now</el-button>
-      </div>
+      </div> -->
       <div class="collect-box">
-        <i class="el-icon-star-off"><span id="like">123</span></i>
+        <svg class="icon" aria-hidden="true" style="font-size: 25px">
+          <use xlink:href="#icon-like"></use>
+        </svg>
+        <span id="like">123</span>
+
+        <!-- <i class="el-icon-star-off"><span id="like">123</span></i> -->
       </div>
     </div>
   </div>
 </template>
 <script>
+import { downloadFromIPFS } from "../../utils/ipfsUtil";
 export default {
   props: ["modelData"],
   data() {
@@ -41,18 +47,17 @@ export default {
   },
   methods: {
     initData() {
-      this.accountAddr = this.modelData.accountAddr;
+      this.accountAddr = this.modelData.address;
       this.metadataHash = this.modelData.metadataHash;
-      this.metadata = JSON.parse(this.modelData.metadata);
-      this.name = this.metadata.name;
-      this.desc = this.metadata.desc;
-      this.img = this.metadata.displayUrl;
-      this.id = this.modelData.id;
-
-      this.$nextTick(function () {
-        document.getElementById(this.id).style.backgroundImage =
-          "url(" + this.img + ")";
+      this.name = this.modelData.name;
+      this.desc = this.modelData.desc;
+      downloadFromIPFS(this.modelData.picUrl).then((res) => {
+        this.$nextTick(function () {
+          document.getElementById(this.id).style.backgroundImage =
+            "url(" + res + ")";
+        });
       });
+      this.id = this.modelData.id;
     },
   },
   mounted() {
@@ -63,17 +68,17 @@ export default {
 
 <style  lang="scss" scoped>
 .image-box {
-    height: 170px;
-    //   background-image: url("https://lh3.googleusercontent.com/4mZN8XfWnchD1Q3HH3hKHUwZPbwHfS2sOjFk2jfdx_T4oWcpQtcUDB2AclymwViSFn4phjzGlXh7KVNMzB-VqjbQ_BEXCTgcdfThpg=h200");
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    border-radius: 10px 10px 0px 0px;
-    /* border-top: 1px inset #22e8fe;
+  height: 170px;
+  //   background-image: url("https://lh3.googleusercontent.com/4mZN8XfWnchD1Q3HH3hKHUwZPbwHfS2sOjFk2jfdx_T4oWcpQtcUDB2AclymwViSFn4phjzGlXh7KVNMzB-VqjbQ_BEXCTgcdfThpg=h200");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  border-radius: 10px 10px 0px 0px;
+  /* border-top: 1px inset #22e8fe;
     border-left: 1px inset #22e8fe;
     border-right:  1px inset #22e8fe; */
-    border: 1.5px inset rgb(162, 139, 245);
-    border-bottom: none;
-  }
+  border: 1.5px inset rgb(162, 139, 245);
+  border-bottom: none;
+}
 
 .infor-box {
   //border-left: 0.5px solid #37e2f5;
@@ -108,11 +113,13 @@ export default {
   }
   .collect-box {
     padding-right: 3%;
-    padding-top: 4%;
     float: right;
+    .icon {
+      margin-top: 15%;
+    }
+    span {
+      margin-bottom: 10%;
+    }
   }
-}   
-
-
-
+}
 </style>

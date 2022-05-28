@@ -1,5 +1,5 @@
 import { Stake, Unstake, Vest } from "./action";
-
+import { NonNegative, StandardNum } from "../utils/numberUtil";
 export class Token {
 
     // constructor
@@ -35,7 +35,7 @@ export class Token {
         // allocatedAmountDelta: 项目发行代币已通过 Vest 分配出去的数量 增量数据
         this.allocatedAmountDelta = new Map();
         // allocatedAmountTotal: 项目发行代币已通过 Vest 分配出去的总量
-        this.allocatedAmountTotal = 0;
+        this.allocatedAmountTotal = Number(0);
         // allocationPercent: 项目代币分配方案
         // Example: {"Team": 0.2, "Community": 0.8}
         this.allocationPercent = new Map();
@@ -46,7 +46,7 @@ export class Token {
         // Example: {"Team": 0, "Community": 0}
         this.stakedAmountDelta = new Map();
         // stakedTotal: 代币在质押池中的总量
-        this.stakedTotal = 0;
+        this.stakedTotal = Number(0);
         // freeMoney: 代币可以自由流通使用的数量
         // Example: {"Team": 100, "Community": 700}
         this.freeMoney = new Map();
@@ -54,25 +54,25 @@ export class Token {
         // Example: {"Team": 0, "Community": 0}
         this.freeMoneyDelta = new Map();
         // freeMoneyTotal: 代币可以自由流通的总量
-        this.freeMoneyTotal = 0;
+        this.freeMoneyTotal = Number(0);
 
         allocations.forEach(element => {
             // 获取 allocationPercent 数据
             this.allocationPercent.set(element.name, Number(element.prop) / 100);    
 
-            this.allocatedAmount.set(element.name, 0);
-            this.allocatedAmountDelta.set(element.name, 0);
-            this.stakedAmount.set(element.name, 0);
-            this.stakedAmountDelta.set(element.name, 0);
-            this.freeMoney.set(element.name, 0);
-            this.freeMoneyDelta.set(element.name, 0);
+            this.allocatedAmount.set(element.name, Number(0));
+            this.allocatedAmountDelta.set(element.name, Number(0));
+            this.stakedAmount.set(element.name, Number(0));
+            this.stakedAmountDelta.set(element.name, Number(0));
+            this.freeMoney.set(element.name, Number(0));
+            this.freeMoneyDelta.set(element.name, Number(0));
         })
 
         // TODO 还需要考虑 public sale 部分
         // communityPolicy: token 给社区分配代币的策略
         this.communityPolicy = {
             allocations: new Map(), // 社区代币的分配比例 Example: {"Airdrop": 0.2, "Staking": 0.8}
-            stakingPool:                0, // TODO [DONE, 还可以如何优化？] 如何更新这个 stakingPool? 在实例化 Stake 节点时，根据其 rewardPolicyFrom 参数来更改对应 token 的 stakingPool 属性 
+            stakingPool:                Number(0), // TODO [DONE, 还可以如何优化？] 如何更新这个 stakingPool? 在实例化 Stake 节点时，根据其 rewardPolicyFrom 参数来更改对应 token 的 stakingPool 属性 
             stakingRewardLifetime:      Number(community.stakingLifetime),
             stakingRewardRefreshPeriod: Number(community.stakingRewardRefresh),
             stakingRewardDefactor:      Number(community.stakingRewardDecreaseFactor) / 100,
@@ -83,20 +83,20 @@ export class Token {
         })
 
         // canVest: token 是否可以 vest 
-        this.canVest = 1;
+        this.canVest = Number(1);
 
         // 社区的发行策略中可能有直接对外发售/空投的币, 这部分币在一开始就属于 freeMoney
         if (this.communityPolicy.allocations.has("Airdrop") ) {
-            let amount = Number((this.totalSupply * this.allocationPercent.get("Community") * this.communityPolicy.allocations.get("Airdrop")).toFixed(4));
-            this.freeMoney.set("Community", this.freeMoney.get("Community") + amount);
+            let amount =  StandardNum(this.totalSupply * this.allocationPercent.get("Community") * this.communityPolicy.allocations.get("Airdrop"));
+            this.freeMoney.set("Community", StandardNum(this.freeMoney.get("Community") + amount));
             this.freeMoneyTotal += amount;
         }
         if (this.communityPolicy.allocations.has("PublicSale")) {
-            let amount = Number((this.totalSupply * this.allocationPercent.get("Community") * this.communityPolicy.allocations.get("PublicSale")).toFixed(4));
-            this.freeMoney.set("Community", this.freeMoney.get("Community") + amount);
+            let amount = StandardNum(this.totalSupply * this.allocationPercent.get("Community") * this.communityPolicy.allocations.get("PublicSale"));
+            this.freeMoney.set("Community", StandardNum(this.freeMoney.get("Community") + amount));
             this.freeMoneyTotal += amount;
         }
-        this.allocatedAmountDelta.set("Community", Number((this.allocationPercent.get("Community") * this.totalSupply).toFixed(4)));
+        this.allocatedAmountDelta.set("Community", StandardNum(this.allocationPercent.get("Community") * this.totalSupply));
     }
 
     // 执行测算逻辑
@@ -116,9 +116,8 @@ export class Token {
             for (let item of this.freeMoneyDelta) {
                 if (preNode.rewardAllocatedDelta.has(item[0])) {
                     item[1] += preNode.rewardAllocatedDelta.get(item[0]);
+                    this.freeMoneyDelta.set(item[0], StandardNum(item[1]));
                 }
-                
-                this.freeMoneyDelta.set(item[0], item[1]);
             }
             
         } 
@@ -128,8 +127,9 @@ export class Token {
                 for (let item of this.freeMoneyDelta) {
                     if (preNode.unstakeHistory.get(curDay).has(item[0])) {
                         item[1] += preNode.unstakeHistory.get(curDay).get(item[0]);
+                        this.freeMoneyDelta.set(item[0], StandardNum(item[1]));
                     }
-                    this.freeMoneyDelta.set(item[0], item[1]);
+                    
                 }
 
                 // TODO vestHistory 暂时不能删除，否则无法在数据可视化面板看到有效数据
@@ -142,8 +142,9 @@ export class Token {
                 for (let item of this.freeMoneyDelta) {
                     if (preNode.vestHistory.get(curDay).has(item[0])) {
                         item[1] += preNode.vestHistory.get(curDay).get(item[0]);
+                        this.freeMoneyDelta.set(item[0], StandardNum(item[1]));
                     }
-                    this.freeMoneyDelta.set(item[0], item[1]);
+                    
                 }
 
                 // TODO vestHistory 暂时不能删除，否则无法在数据可视化面板看到有效数据
@@ -163,26 +164,26 @@ export class Token {
         console.log(this.symbol, "::token: allocatedAmountDelta:", this.allocatedAmountDelta);
         // 执行 stakedAmount 的数据更新, 并重置增量数据
         for(let item of this.stakedAmount.entries()) {
-            item[1] += this.stakedAmountDelta.get(item[0]);
-            this.stakedAmount.set(item[0], item[1]);
-            this.stakedTotal += this.stakedAmountDelta.get(item[0]);
-            this.stakedAmountDelta.set(item[0], 0);
+            item[1] = NonNegative(item[1] + this.stakedAmountDelta.get(item[0]));
+            this.stakedAmount.set(item[0], StandardNum(item[1]));
+            this.stakedTotal = NonNegative(this.stakedTotal + this.stakedAmountDelta.get(item[0]));
+            this.stakedAmountDelta.set(item[0], Number(0));
         }
 
         // 执行 freeMoney 的数据更新, 并重置增量数据
         for(let item of this.freeMoney.entries()) {
-            item[1] += this.freeMoneyDelta.get(item[0]);
-            this.freeMoney.set(item[0], item[1]);
-            this.freeMoneyTotal += this.freeMoneyDelta.get(item[0]);
-            this.freeMoneyDelta.set(item[0], 0);
+            item[1] = NonNegative(item[1] + this.freeMoneyDelta.get(item[0]));
+            this.freeMoney.set(item[0], StandardNum(item[1]));
+            this.freeMoneyTotal = NonNegative(this.freeMoneyTotal + this.freeMoneyDelta.get(item[0]));
+            this.freeMoneyDelta.set(item[0], Number(0));
         }
 
         // 执行 allocatedAmount 的数据更新，并重置增量数据
         for(let item of this.allocatedAmount.entries()) {
-            item[1] += this.allocatedAmountDelta.get(item[0]);
-            this.allocatedAmount.set(item[0], item[1]);
-            this.allocatedAmountTotal += this.allocatedAmountDelta.get(item[0]);
-            this.allocatedAmountDelta.set(item[0], 0);
+            item[1] = NonNegative(item[1] + this.allocatedAmountDelta.get(item[0]));
+            this.allocatedAmount.set(item[0], StandardNum(item[1]));
+            this.allocatedAmountTotal = NonNegative(this.allocatedAmountTotal + this.allocatedAmountDelta.get(item[0]));
+            this.allocatedAmountDelta.set(item[0], Number(0));
         }
        
         // 对于有发行量的币，需要更新 canVest 参数
@@ -210,7 +211,7 @@ export class Token {
     //  更新已存在的 Token 实例里的参数
     selfUpdate(symbol, totalSupply, allocations, community) {
         this.symbol = symbol;
-        this.totalSupply = totalSupply;
+        this.totalSupply = Number(totalSupply);
 
         allocations.forEach(element => {
             // 更新 allocationPercent 数据
